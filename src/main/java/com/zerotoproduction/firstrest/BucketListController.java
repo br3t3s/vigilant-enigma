@@ -19,8 +19,15 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Spliterator;
+import java.util.Spliterators;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 @RestController
 public class BucketListController {
@@ -29,6 +36,8 @@ public class BucketListController {
     private JavaMailSender javaMailSender;
 
     private List<BucketList> myBucketList = new ArrayList();
+    private List<String> requests = new ArrayList();
+    private List<String> headers = new ArrayList();
     private final AtomicLong counter = new AtomicLong();
 
     public BucketListController() {
@@ -56,6 +65,18 @@ public class BucketListController {
 
     }
 
+    @GetMapping(path = "/bbb")
+    public ResponseEntity createBBB() {
+        return ResponseEntity.ok(requests);
+    }
+
+    @GetMapping(path = "/ccc")
+    public ResponseEntity createccc() {
+        return ResponseEntity.ok(headers);
+    }
+
+
+
     @PostMapping(path = "/abc")
     public ResponseEntity createAbc(HttpServletRequest request) throws IOException {
         StringBuilder builder = new StringBuilder();
@@ -65,8 +86,29 @@ public class BucketListController {
                 builder.append(buf, 0, len);
         }
         String requestBody = builder.toString();
-        sendCreateEventNotificationToUsers(requestBody);
+
+        List<String> collect = enumerationAsStream(request.getHeaderNames())
+                .map(request::getHeader)
+                .collect(Collectors.toList());
+
+        headers.addAll(collect);
+
+        requests.add(requestBody);
         return ResponseEntity.ok(requestBody);
+    }
+
+    public static <T> Stream<T> enumerationAsStream(Enumeration<T> e) {
+        return StreamSupport.stream(
+                Spliterators.spliteratorUnknownSize(
+                        new Iterator<T>() {
+                            public T next() {
+                                return e.nextElement();
+                            }
+                            public boolean hasNext() {
+                                return e.hasMoreElements();
+                            }
+                        },
+                        Spliterator.ORDERED), false);
     }
 
     @PostMapping(value = "/")
@@ -102,7 +144,7 @@ public class BucketListController {
             System.out.println("DDDDDDDDDDDDDDDD");
             javaMailSender.send(createMessage(text));
         } catch (Exception e) {
-            System.out.println("DDDDDDDDDDDDDDDD "+e.getMessage());
+            System.out.println("DDDDDDDDDDDDDDDD " + e.getMessage());
         }
     }
 
